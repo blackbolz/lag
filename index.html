@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAG</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=MS+Sans+Serif:wght@400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'MS Sans Serif', sans-serif;
+            background: linear-gradient(135deg, #008080 0%, #20B2AA 25%, #008B8B 50%, #006666 75%, #004040 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Fullscreen Desktop */
+        .desktop {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%),
+                linear-gradient(135deg, #008080 0%, #20B2AA 25%, #008B8B 50%, #006666 75%, #004040 100%);
+            transition: background 1s ease-in-out;
+        }
+
+        .desktop.loaded {
+            background: url('images/background.png') no-repeat center center;
+            background-size: cover;
+        }
+        
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #008080;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-container {
+            background: #C0C0C0;
+            border: 3px outset #C0C0C0;
+            padding: 30px;
+            min-width: 400px;
+            text-align: center;
+        }
+
+        .loading-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #000080;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 12px;
+            color: #000000;
+            margin-bottom: 20px;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: #FFFFFF;
+            border: 2px inset #C0C0C0;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, #0000FF, #0066FF);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: #666666;
+            margin-bottom: 20px;
+        }
+
+        .loading-error {
+            color: #CC0000;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .loading-hidden {
+            display: none !important;
+        }
+        .desktop-icons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 5;
+        }
+        
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+        
+        .desktop-icon:hover {
+            background: rgba(255,255,255,0.15);
+        }
+        
+        .desktop-icon img {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 8px;
+        }
+        
+        .desktop-icon span {
+            color: white;
+            font-size: 11px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-weight: bold;
+        }
+        
+        /* Taskbar */
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: linear-gradient(to bottom, #245EDC, #1A4DB8);
+            border-top: 2px solid #5B9BD5;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            z-index: 1000;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .start-button {
+            background: linear-gradient(to bottom, #2F6FDD, #1A4DB8);
+            border: 2px outset #2F6FDD;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 6px 18px;
+            margin-right: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .start-button:hover {
+            background: linear-gradient(to bottom, #4080EE, #2F6FDD);
+        }
+        
+        .start-button:active {
+            border: 2px inset #2F6FDD;
+        }
+        
+        .taskbar-buttons {
+            flex: 1;
+            display: flex;
+            gap: 3px;
+            overflow: hidden;
+        }
+        
+        .taskbar-button {
+            background: linear-gradient(to bottom, #3A7AE4, #245EDC);
+            border: 2px outset #3A7AE4;
+            color: white;
+            font-size: 11px;
+            padding: 5px 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+        }
+        
+        .taskbar-button:hover {
+            background: linear-gradient(to bottom, #4A8AEE, #3A7AE4);
+        }
+        
+        .taskbar-button.active {
+            border: 2px inset #3A7AE4;
+            background: linear-gradient(to bottom, #2A5ACC, #1A4DB8);
+        }
+        
+        .system-tray {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            padding: 0 12px;
+            font-size: 11px;
+            color: white;
+        }
+        
+        /* Signal indicator for poor connection */
+        .signal-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        
+        .signal-bars {
+            display: flex;
+            gap: 1px;
+            align-items: flex-end;
+            height: 12px;
+        }
+        
+        .bar {
+            width: 2px;
+            background: #666;
+            border-radius: 1px;
+        }
+        
+        .bar:nth-child(1) { height: 3px; background: #ff4444; }
+        .bar:nth-child(2) { height: 6px; background: #666; }
+        .bar:nth-child(3) { height: 9px; background: #666; }
+        .bar:nth-child(4) { height: 12px; background: #666; }
+        
+        .connection-text {
+            font-size: 8px;
+            color: #ff6666;
+            margin-top: 1px;
+        }
+        
+        /* Windows */
+        .window {
+            position: absolute;
+            background: #C0C0C0;
+            border: 3px outset #C0C0C0;
+            border-radius: 0;
+            box-shadow: 6px 6px 16px rgba(0,0,0,0.5);
+            min-width: 420px;
+            z-index: 10;
+            font-family: 'MS Sans Serif', sans-serif;
+        }
+        
+        .window-title-bar {
+            background: linear-gradient(to bottom, #0A5DC4, #0053C7);
+            color: white;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+        
+        .window-controls {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .window-control {
+            width: 18px;
+            height: 16px;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px outset #C0C0C0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .minimize { background: #C0C0C0; color: black; }
+        .maximize { background: #C0C0C0; color: black; }
+        .close { background: #C0C0C0; color: black; }
+        
+        .window-control:active {
+            border: 2px inset #C0C0C0;
+        }
+        
+        .window-control:hover {
+            box-shadow: inset 0 0 3px rgba(255,255,255,0.5);
+        }
+        
+        .window-content {
+            padding: 25px;
+            max-height: 450px;
+            overflow-y: auto;
+            background: #C0C0C0;
+        }
+        
+        /* Main LAG Window */
+        .main-window {
+            top: 100px;
+            left: calc(50% - 320px);
+            width: 640px;
+            text-align: center;
+        }
+        
+        .lag-title {
+            font-size: 52px;
+            font-weight: bold;
+            color: #800000;
+            margin-bottom: 12px;
+            text-shadow: 2px 2px 0px #000000;
+        }
+        
+        .lag-tagline {
+            font-size: 20px;
+            color: #000080;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+
+        /* Contract Address Section */
+        .contract-address-section {
+            margin: 25px 0;
+            padding: 18px;
+            background: #E0E0E0;
+            border: 3px inset #C0C0C0;
+            border-radius: 0;
+        }
+
+        .ca-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .ca-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #000080;
+        }
+
+        .ca-box {
+            background: #FFFFFF;
+            border: 2px inset #C0C0C0;
+            padding: 10px 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #000000;
+            min-width: 220px;
+            text-align: center;
+        }
+
+        .copy-button {
+            background: linear-gradient(to bottom, #DFDFDF, #BFBFBF);
+            border: 2px outset #BFBFBF;
+            font-size: 11px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #000000;
+        }
+
+        .copy-button:hover {
+            background: linear-gradient(to bottom, #EFEFEF, #CFCFCF);
+        }
+
+        .copy-button:active {
+            border: 2px inset #BFBFBF;
+        }
+
+        .copy-feedback {
+            font-size: 10px;
+            color: #008000;
+            font-style: italic;
+            margin-left: 8px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+
+        .copy-feedback.show {
+            opacity: 1;
+        }
+        
+        /* Popup Windows */
+        .popup {
+            position: absolute;
+            background: #C0C0C0;
+            border: 3px outset #C0C0C0;
+            box-shadow: 6px 6px 16px rgba(0,0,0,0.5);
+            min-width: 340px;
+            z-index: 1000;
+            animation: popup-lag 0.6s ease-out;
+        }
+        
+        @keyframes popup-lag {
+            0% { transform: scale(0.7); opacity: 0; }
+            20% { transform: scale(0.8); opacity: 0.3; }
+            40% { transform: scale(0.9); opacity: 0.6; }
+            60% { transform: scale(1.02); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .popup-content {
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .popup-icon {
+            font-size: 36px;
+            margin-bottom: 18px;
+        }
+        
+        .popup-text {
+            font-size: 12px;
+            margin-bottom: 25px;
+            color: #000000;
+            line-height: 1.4;
+        }
+        
+        .retry-button {
+            background: linear-gradient(to bottom, #FFCC66, #FF9900);
+            border: 3px outset #FF9900;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px 25px;
+            cursor: pointer;
+            color: #000000;
+        }
+        
+        .retry-button:hover {
+            background: linear-gradient(to bottom, #FFDD99, #FFAA33);
+        }
+        
+        .retry-button:active {
+            border: 3px inset #FF9900;
+        }
+        
+        /* Lag Button Style */
+        .lag-button {
+            background: linear-gradient(to bottom, #FF6666, #CC0000);
+            border: 3px outset #CC0000;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px 25px;
+            cursor: pointer;
+            color: #FFFFFF;
+        }
+        
+        .lag-button:hover {
+            background: linear-gradient(to bottom, #FF9999, #FF3333);
+        }
+        
+        .lag-button:active {
+            border: 3px inset #CC0000;
+        }
+        
+        /* Button Container */
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin: 25px 0;
+            flex-wrap: wrap;
+        }
+        
+        /* About Window */
+        .about-window {
+            top: 140px;
+            left: 120px;
+            width: 500px;
+            display: none;
+        }
+        
+        .about-content {
+            font-size: 12px;
+            line-height: 1.6;
+            text-align: left;
+        }
+        
+        .about-content h3 {
+            color: #800000;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        
+        .about-content p {
+            margin-bottom: 18px;
+        }
+        
+        /* Lag effects */
+        .lagging {
+            transition: all 0.8s ease-out;
+            transform: scale(0.98);
+            opacity: 0.7;
+        }
+        
+        /* Draggable windows */
+        .dragging {
+            user-select: none;
+            pointer-events: none;
+        }
+        
+        .dragging * {
+            pointer-events: none;
+        }
+        
+        /* Keyboard shortcut hint */
+        .keyboard-hint {
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+            margin-top: 12px;
+        }
+        
+        /* Visual feedback for keyboard shortcuts */
+        .keyboard-active {
+            animation: keyboardPulse 0.4s ease-out;
+        }
+        
+        @keyframes keyboardPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @media (max-width: 768px) {
+            .main-window {
+                width: 95%;
+                min-width: 320px;
+                left: 2.5%;
+            }
+            
+            .lag-title {
+                font-size: 36px;
+            }
+            
+            .button-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .ca-container {
+                flex-direction: column;
+            }
+
+            .ca-box {
+                min-width: 280px;
+            }
+        }
+        
+        /* Minimized and Fullscreen states */
+        .window.minimized {
+            display: none !important;
+        }
+        
+        .window.fullscreen {
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: calc(100% - 32px) !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0;
+            z-index: 50;
+        }
+        
+        .window.fullscreen .window-content {
+            height: calc(100% - 28px);
+            max-height: none;
+        }
+
+        /* Loading/buffering effect */
+        .buffering {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .buffering::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: buffer-sweep 2s infinite;
+        }
+
+        @keyframes buffer-sweep {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-container">
+            <div class="loading-title">Loading $LAG...</div>
+            <div class="loading-text">Connecting to server...</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">0%</div>
+            <div class="loading-error" id="loadingError">
+                Connection failed! Server timeout.
+                <br><br>
+                <button class="retry-button" onclick="retryLoading()">RETRY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Desktop -->
+    <div class="desktop loading-hidden" id="desktop">
+        <!-- Desktop Icons -->
+        <div class="desktop-icons">
+            <div class="desktop-icon" onclick="laggedClick(() => openAboutWindow())">
+                <img src="images/info.png" alt="About" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; width: 48px; height: 48px; background: linear-gradient(45deg, #4A90E2, #357ABD); border: 3px outset #4A90E2; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">?</div>
+                <span>About</span>
+            </div>
+            <div class="desktop-icon" onclick="laggedClick(() => window.open('https://pump.fun/board', '_blank'))">
+                <img src="images/pumplogo.png" alt="Buy" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; width: 48px; height: 48px; background: linear-gradient(45deg, #FFD700, #FFA500); border: 3px outset #FFD700; align-items: center; justify-content: center; color: #333; font-weight: bold; font-size: 16px;">💰</div>
+                <span>Buy $LAG</span>
+            </div>
+            <div class="desktop-icon" onclick="laggedClick(() => window.open('https://x.com', '_blank'))">
+                <img src="images/xlogo.png" alt="Twitter" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; width: 48px; height: 48px; background: linear-gradient(45deg, #1DA1F2, #0d8bd9); border: 3px outset #1DA1F2; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">X</div>
+                <span>Community</span>
+            </div>
+            <div class="desktop-icon" onclick="laggedClick(() => window.open('https://dexscreener.com', '_blank'))">
+                <img src="images/dexlogo.png" alt="Dex" style="width: 48px; height: 48px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div style="display: none; width: 48px; height: 48px; background: linear-gradient(45deg, #0088cc, #006699); border: 3px outset #0088cc; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px;">D</div>
+                <span>Dexscreener</span>
+            </div>
+        </div>
+        
+        <!-- Main LAG Window -->
+        <div class="window main-window">
+            <div class="window-title-bar">
+                <span>$LAG - When Your Internet Gives Up</span>
+                <div class="window-controls">
+                    <div class="window-control minimize" onclick="laggedClick(() => minimizeWindow(this.closest('.window')))" title="Minimize">_</div>
+                    <div class="window-control maximize" onclick="laggedClick(() => toggleFullscreen(this.closest('.window')))" title="Maximize">□</div>
+                    <div class="window-control close" onclick="laggedClick(() => minimizeMainWindow())" title="Close">&times;</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <h1 class="lag-title">$LAG</h1>
+                <div class="lag-tagline">Connection Timeout... Retry?</div>
+                
+                <div style="text-align: left; font-size: 12px; line-height: 1.6; margin: 25px 0;">
+                    <p><strong>We've all been there.</strong> Slow internet. Failed downloads. Endless buffering. 404 errors.</p>
+                    <p>Every click takes forever. Every trade loads like it's 1999. Your portfolio updates slower than dial-up.</p>
+                    <p><strong>$LAG — the token that embraces the struggle.</strong></p>
+                    <p>When the internet fails you, $LAG succeeds. Join the slowest community on the blockchain.</p>
+                </div>
+                
+                <!-- Contract Address Section -->
+                <div class="contract-address-section">
+                    <div class="ca-container">
+                        <span class="ca-label">CA:</span>
+                        <div class="ca-box" id="contractAddress">loading...</div>
+                        <button class="copy-button" onclick="laggedClick(() => copyContractAddress())">Copy</button>
+                        <span class="copy-feedback" id="copyFeedback">Copied!</span>
+                    </div>
+                </div>
+                
+                <div style="font-size: 10px; font-style: italic; color: #666; text-align: center; margin-top: 18px;">
+                    *$LAG will not actually fix your internet, but it will validate your frustration.
+                </div>
+            </div>
+        </div>
+        
+        <!-- About Window (Hidden by default) -->
+        <div class="window about-window" id="aboutWindow">
+            <div class="window-title-bar">
+                <span>About $LAG - Connection Issues</span>
+                <div class="window-controls">
+                    <div class="window-control minimize" onclick="laggedClick(() => minimizeWindow(this.closest('.window')))" title="Minimize">_</div>
+                    <div class="window-control maximize" onclick="laggedClick(() => toggleFullscreen(this.closest('.window')))" title="Maximize">□</div>
+                    <div class="window-control close" onclick="laggedClick(() => closeAboutWindow())" title="Close">&times;</div>
+                </div>
+            </div>
+            <div class="window-content about-content">
+                <h3>🐌 Slow Loading Experience</h3>
+                <p>Every click deliberately lags for that authentic dial-up nostalgia. Experience the frustration of 56k modem speeds with modern crypto trading.</p>
+                
+                <h3>📡 Connection Errors</h3>
+                <p>Get bombarded with realistic "connection timeout", "server not responding", and "retry" popups. Just like your real internet experience, but worse.</p>
+                
+                <h3>🔄 Automatic Lag Experience</h3>
+                <p>No need to click anything - the lag finds you! Popups appear automatically to simulate that authentic slow internet experience you know and hate.</p>
+                
+                <h3>🤝 Lag Community</h3>
+                <p>Join fellow sufferers of bad internet. Share your connection horror stories and bond over mutual digital suffering.</p>
+                
+                <h3>⏳ Eternal Buffering</h3>
+                <p>Why settle for fast transactions when you can wait forever? $LAG holders appreciate the art of patience and the beauty of loading screens.</p>
+            </div>
+        </div>
+        
+        <!-- Taskbar -->
+        <div class="taskbar">
+            <div class="start-button" onclick="laggedClick(() => performLag())">
+                <span style="color: #FFD700;">⊞</span>
+                Start
+            </div>
+            <div class="taskbar-buttons">
+                <div class="taskbar-button active">$LAG - When Your Internet Gives Up</div>
+                <div class="taskbar-button" id="aboutTaskbarButton" style="display: none;" onclick="laggedClick(() => toggleAboutWindow())">About $LAG - Connection Issues</div>
+            </div>
+            <div class="system-tray">
+                <span>🔊</span>
+                <div class="signal-indicator">
+                    <div class="signal-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div class="connection-text">EDGE</div>
+                </div>
+                <span id="clock"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio element for click sounds -->
+    <audio id="clickSound" preload="auto">
+        <source src="images/click.mp3" type="audio/mp3">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApKnuPyy3ElBSuF0fPVfiwELYHM9NeKOAYZaqzj9KlsEQlMnuLzx3ElBSuF0POZEjFiIgD//1Qx" />
+    </audio>
+
+    <script>
+        const lagMessages = [
+            "Connection timed out... retry?",
+            "Server not responding.",
+            "Your internet is slower than dial-up.",
+            "404: Page not found... again.",
+            "Connection failed. Check your network.",
+            "This page is taking forever to load.",
+            "Network error. Please try again.",
+            "Unable to connect to server.",
+            "Your connection is unstable.",
+            "Buffering... 0%",
+            "DNS lookup failed.",
+            "Connection interrupted.",
+            "Request timeout exceeded.",
+            "Network unreachable.",
+            "Connection reset by peer."
+        ];
+
+        const retryMessages = [
+            "Still buffering...",
+            "Loading... please wait.",
+            "Connection attempt #2 failed.",
+            "Retrying connection...",
+            "Server overloaded. Try later.",
+            "Connection still slow.",
+            "Third time's the charm?",
+            "Buffering... 1%",
+            "Network issues persist.",
+            "Still having connection problems.",
+            "Retry attempt failed.",
+            "Connection unstable, retrying...",
+            "Please check your internet.",
+            "Loading slower than expected.",
+            "Connection quality: Poor"
+        ];
+
+        let activePopups = [];
+        let windowStates = new Map();
+        let popupCounter = 0;
+        let highestZIndex = 200;
+        let loadingAttempt = 0;
+
+        // Loading Screen Functions
+        function startLoading() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const loadingError = document.getElementById('loadingError');
+            const loadingText = document.querySelector('.loading-text');
+            
+            // Reset state
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+            loadingError.style.display = 'none';
+            loadingText.textContent = 'Connecting to server...';
+            
+            let progress = 0;
+            const loadingInterval = setInterval(() => {
+                progress += Math.random() * 15 + 5; // Random progress between 5-20%
+                
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(loadingInterval);
+                    
+                    // Complete loading or show error
+                    if (loadingAttempt === 0) {
+                        // First attempt - fail
+                        setTimeout(() => {
+                            showLoadingError();
+                        }, 500);
+                    } else {
+                        // Second attempt - success
+                        setTimeout(() => {
+                            completeLoading();
+                        }, 500);
+                    }
+                }
+                
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.floor(progress) + '%';
+                
+                // Update loading text based on progress
+                if (progress < 30) {
+                    loadingText.textContent = 'Connecting to server...';
+                } else if (progress < 60) {
+                    loadingText.textContent = 'Loading $LAG data...';
+                } else if (progress < 90) {
+                    loadingText.textContent = 'Initializing lag systems...';
+                } else {
+                    loadingText.textContent = 'Almost ready...';
+                }
+                
+            }, 100 + Math.random() * 200); // Variable speed for authentic lag feel
+        }
+        
+        function showLoadingError() {
+            const loadingError = document.getElementById('loadingError');
+            const loadingText = document.querySelector('.loading-text');
+            
+            loadingText.textContent = 'Connection failed!';
+            loadingError.style.display = 'block';
+            playClickSound();
+        }
+        
+        function retryLoading() {
+            loadingAttempt = 1;
+            playClickSound();
+            startLoading();
+        }
+        
+        function completeLoading() {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const desktop = document.getElementById('desktop');
+            
+            // Fade out loading screen
+            loadingScreen.style.transition = 'opacity 0.5s ease-out';
+            loadingScreen.style.opacity = '0';
+            
+            setTimeout(() => {
+                loadingScreen.classList.add('loading-hidden');
+                desktop.classList.remove('loading-hidden');
+                
+                // Add loaded class to change background to custom PNG
+                desktop.classList.add('loaded');
+                
+                // Show 2 automatic popups after desktop loads
+                setTimeout(() => {
+                    showPopup(lagMessages, '❌', 'Connection Error');
+                }, 1500);
+                
+                setTimeout(() => {
+                    showPopup(retryMessages, '⏳', 'Network Timeout');
+                }, 2500);
+            }, 500);
+        }
+
+        // Lag effect function - makes every click feel slow
+        function laggedClick(callback) {
+            const element = event.target;
+            element.classList.add('lagging');
+            
+            // Add buffering effect
+            element.classList.add('buffering');
+            
+            setTimeout(() => {
+                element.classList.remove('lagging', 'buffering');
+                if (callback) callback();
+            }, 800 + Math.random() * 1200); // Random lag between 0.8-2 seconds
+        }
+
+        // Copy contract address function
+        function copyContractAddress() {
+            const contractText = document.getElementById('contractAddress').textContent;
+            const feedback = document.getElementById('copyFeedback');
+            
+            // Try to copy to clipboard
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(contractText).then(() => {
+                    showCopyFeedback();
+                }).catch(() => {
+                    // Fallback for older browsers
+                    fallbackCopy(contractText);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackCopy(contractText);
+            }
+            
+            playClickSound();
+        }
+
+        function fallbackCopy(text) {
+            // Create a temporary textarea element
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showCopyFeedback();
+            } catch (err) {
+                console.log('Copy failed:', err);
+            }
+            
+            document.body.removeChild(textarea);
+        }
+
+        function showCopyFeedback() {
+            const feedback = document.getElementById('copyFeedback');
+            feedback.classList.add('show');
+            setTimeout(() => {
+                feedback.classList.remove('show');
+            }, 3000);
+        }
+
+        // Window focus management
+        function bringToFront(element) {
+            // Remove focus from all windows and popups
+            document.querySelectorAll('.window, .popup').forEach(el => {
+                el.classList.remove('focused');
+            });
+            
+            // Add focus to clicked element and bring to front
+            element.classList.add('focused');
+            highestZIndex += 10;
+            element.style.zIndex = highestZIndex;
+        }
+
+        // Add click listeners to all windows and popups for focus management
+        document.addEventListener('click', function(e) {
+            const clickedWindow = e.target.closest('.window, .popup');
+            if (clickedWindow && !clickedWindow.classList.contains('fullscreen')) {
+                bringToFront(clickedWindow);
+            }
+        });
+
+        // Play click sound function
+        function playClickSound() {
+            try {
+                const audio = document.getElementById('clickSound');
+                audio.currentTime = 0;
+                audio.play().catch(e => {
+                    console.log('Audio play failed:', e);
+                });
+            } catch(e) {
+                console.log('Audio not available:', e);
+            }
+        }
+
+        // Add click sound to all clickable elements
+        document.addEventListener('click', function(e) {
+            if (e.target.tagName === 'BUTTON' || 
+                e.target.classList.contains('window-control') ||
+                e.target.classList.contains('desktop-icon') ||
+                e.target.classList.contains('start-button') ||
+                e.target.classList.contains('taskbar-button')) {
+                playClickSound();
+            }
+        });
+
+        // Keyboard shortcut handler - removed, only clickable buttons now
+
+        function performLag() {
+            playClickSound();
+            showPopup(lagMessages, '❌', 'Connection Error');
+        }
+
+        function performRetry() {
+            playClickSound();
+            // Retry creates multiple popups for maximum lag frustration
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    showPopup(retryMessages, '⏳', 'Retry Failed');
+                }, i * 500);
+            }
+        }
+
+        function showPopup(messages, icon, title) {
+            const popup = document.createElement('div');
+            popup.className = 'popup';
+            popupCounter++;
+            popup.id = `popup-${popupCounter}-${Date.now()}`;
+            
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            
+            popup.innerHTML = `
+                <div class="window-title-bar">
+                    <span>${title}</span>
+                    <div class="window-controls">
+                        <div class="window-control close" onclick="laggedClick(() => closeSpecificPopup('${popup.id}'))">&times;</div>
+                    </div>
+                </div>
+                <div class="popup-content">
+                    <div class="popup-icon">${icon}</div>
+                    <div class="popup-text">${randomMessage}</div>
+                    <div class="button-container">
+                        <button class="retry-button" onclick="laggedClick(() => closeSpecificPopup('${popup.id}'))">OK</button>
+                        <button class="lag-button" onclick="laggedClick(() => popupRetry())">RETRY</button>
+                    </div>
+                </div>
+            `;
+            
+            // Random position within screen bounds
+            const desktop = document.querySelector('.desktop');
+            const maxX = desktop.clientWidth - 380;
+            const maxY = desktop.clientHeight - 280;
+            const randomX = Math.random() * Math.max(0, maxX - 50) + 50;
+            const randomY = Math.random() * Math.max(0, maxY - 120) + 120;
+            
+            popup.style.left = randomX + 'px';
+            popup.style.top = randomY + 'px';
+            
+            desktop.appendChild(popup);
+            activePopups.push(popup.id);
+            
+            // Bring new popup to front
+            setTimeout(() => bringToFront(popup), 100);
+        }
+
+        function popupRetry() {
+            playClickSound();
+            // Create 4 new popups with staggered lag effects when retry is pressed
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => {
+                    const useRetryMessage = Math.random() < 0.7; // 70% retry messages, 30% lag messages
+                    if (useRetryMessage) {
+                        showPopup(retryMessages, '⏳', 'Retry Failed');
+                    } else {
+                        showPopup(lagMessages, '❌', 'Connection Error');
+                    }
+                }, i * (600 + Math.random() * 400)); // Variable staggered timing for authentic lag
+            }
+        }
+
+        function closeSpecificPopup(popupId) {
+            const popup = document.getElementById(popupId);
+            if (popup) {
+                popup.style.animation = 'popup-lag 0.3s ease-in reverse';
+                setTimeout(() => {
+                    if (popup.parentNode) {
+                        popup.remove();
+                    }
+                    activePopups = activePopups.filter(id => id !== popupId);
+                }, 300);
+            }
+        }
+
+        function openAboutWindow() {
+            const aboutWindow = document.getElementById('aboutWindow');
+            const taskbarButton = document.getElementById('aboutTaskbarButton');
+            aboutWindow.classList.remove('minimized');
+            aboutWindow.style.display = 'block';
+            taskbarButton.style.display = 'block';
+            taskbarButton.classList.add('active');
+            // Bring to front when opened
+            bringToFront(aboutWindow);
+        }
+
+        function closeAboutWindow() {
+            const aboutWindow = document.getElementById('aboutWindow');
+            const taskbarButton = document.getElementById('aboutTaskbarButton');
+            aboutWindow.style.display = 'none';
+            taskbarButton.style.display = 'none';
+            taskbarButton.classList.remove('active');
+        }
+
+        function toggleAboutWindow() {
+            const aboutWindow = document.getElementById('aboutWindow');
+            const taskbarButton = document.getElementById('aboutTaskbarButton');
+            
+            if (aboutWindow.classList.contains('minimized')) {
+                aboutWindow.classList.remove('minimized');
+                aboutWindow.style.display = 'block';
+                taskbarButton.classList.add('active');
+            } else if (aboutWindow.style.display === 'none') {
+                openAboutWindow();
+            } else {
+                minimizeWindow(aboutWindow);
+            }
+        }
+
+        function minimizeMainWindow() {
+            const mainWindow = document.querySelector('.main-window');
+            minimizeWindow(mainWindow);
+        }
+
+        // Restore window when taskbar button clicked
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('taskbar-button') && !e.target.classList.contains('active')) {
+                const buttonText = e.target.textContent;
+                let windowToRestore = null;
+                
+                if (buttonText.includes('$LAG')) {
+                    windowToRestore = document.querySelector('.main-window');
+                } else if (buttonText.includes('About')) {
+                    windowToRestore = document.getElementById('aboutWindow');
+                }
+                
+                if (windowToRestore && windowToRestore.classList.contains('minimized')) {
+                    windowToRestore.classList.remove('minimized');
+                    windowToRestore.style.display = 'block';
+                    e.target.classList.add('active');
+                    // Bring restored window to front
+                    bringToFront(windowToRestore);
+                }
+            }
+        });
+
+        function minimizeWindow(windowElement) {
+            if (!windowElement) return;
+            
+            const windowId = windowElement.id || 'window-' + Date.now();
+            windowElement.id = windowId;
+            
+            // Store current state
+            windowStates.set(windowId, {
+                display: windowElement.style.display,
+                position: {
+                    left: windowElement.style.left,
+                    top: windowElement.style.top,
+                    width: windowElement.style.width,
+                    height: windowElement.style.height
+                }
+            });
+            
+            windowElement.classList.add('minimized');
+            
+            // Update taskbar button
+            const taskbarButtons = document.querySelectorAll('.taskbar-button');
+            taskbarButtons.forEach(btn => {
+                if (btn.textContent.includes(windowElement.querySelector('.window-title-bar span').textContent)) {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function toggleFullscreen(windowElement) {
+            if (!windowElement) return;
+            
+            if (windowElement.classList.contains('fullscreen')) {
+                // Exit fullscreen
+                windowElement.classList.remove('fullscreen');
+                const windowId = windowElement.id;
+                const savedState = windowStates.get(windowId);
+                if (savedState) {
+                    Object.assign(windowElement.style, savedState.position);
+                    windowElement.style.transform = savedState.transform || '';
+                }
+                windowElement.querySelector('.maximize').textContent = '□';
+                // Restore normal z-index behavior
+                bringToFront(windowElement);
+            } else {
+                // Enter fullscreen
+                const windowId = windowElement.id || 'window-' + Date.now();
+                windowElement.id = windowId;
+                
+                // Save current state including transform
+                windowStates.set(windowId, {
+                    display: windowElement.style.display,
+                    transform: windowElement.style.transform,
+                    position: {
+                        left: windowElement.style.left,
+                        top: windowElement.style.top,
+                        width: windowElement.style.width,
+                        height: windowElement.style.height
+                    }
+                });
+                
+                windowElement.classList.add('fullscreen');
+                windowElement.querySelector('.maximize').textContent = '❐';
+                // Fullscreen windows get highest z-index
+                windowElement.style.zIndex = '200';
+            }
+        }
+
+        // Clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            document.getElementById('clock').textContent = time;
+        }
+        
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Auto-generate random lag popups occasionally
+        setInterval(() => {
+            if (Math.random() < 0.18 && activePopups.length < 25) {
+                const useLag = Math.random() < 0.6; // 60% chance for lag, 40% for retry
+                if (useLag) {
+                    showPopup(lagMessages, '❌', 'Connection Error');
+                } else {
+                    showPopup(retryMessages, '⏳', 'Retry Failed');
+                }
+            }
+        }, 7000); // Every 7 seconds
+
+        // Show initial popup after page load - REMOVED, now handled by loading sequence
+        window.addEventListener('load', () => {
+            startLoading();
+        });
+
+        // Make windows draggable with smooth movement
+        let isDragging = false;
+        let currentWindow = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        document.addEventListener('mousedown', function(e) {
+            const titleBar = e.target.closest('.window-title-bar');
+            if (titleBar && !e.target.classList.contains('window-control')) {
+                isDragging = true;
+                currentWindow = titleBar.closest('.window') || titleBar.closest('.popup');
+                
+                if (currentWindow) {
+                    // Get current position
+                    const rect = currentWindow.getBoundingClientRect();
+                    const desktopRect = document.querySelector('.desktop').getBoundingClientRect();
+                    
+                    // Calculate offset from mouse to window top-left corner
+                    dragOffset.x = e.clientX - rect.left;
+                    dragOffset.y = e.clientY - rect.top;
+                    
+                    currentWindow.classList.add('dragging');
+                    
+                    // Bring to front when starting to drag
+                    bringToFront(currentWindow);
+                    
+                    e.preventDefault();
+                }
+            }
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging && currentWindow) {
+                const desktop = document.querySelector('.desktop');
+                const desktopRect = desktop.getBoundingClientRect();
+                const windowRect = currentWindow.getBoundingClientRect();
+                
+                // Calculate new position relative to desktop
+                let newX = e.clientX - desktopRect.left - dragOffset.x;
+                let newY = e.clientY - desktopRect.top - dragOffset.y;
+                
+                // Constrain to desktop bounds with some padding
+                const minX = 10;
+                const minY = 10;
+                const maxX = desktop.clientWidth - windowRect.width - 10;
+                const maxY = desktop.clientHeight - windowRect.height - 50; // Leave room for taskbar
+                
+                newX = Math.max(minX, Math.min(maxX, newX));
+                newY = Math.max(minY, Math.min(maxY, newY));
+                
+                currentWindow.style.left = newX + 'px';
+                currentWindow.style.top = newY + 'px';
+                currentWindow.style.transform = 'none'; // Remove any existing transform
+                
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('mouseup', function(e) {
+            if (isDragging && currentWindow) {
+                currentWindow.classList.remove('dragging');
+                isDragging = false;
+                currentWindow = null;
+            }
+        });
+
+        // Prevent text selection while dragging
+        document.addEventListener('selectstart', function(e) {
+            if (isDragging) {
+                e.preventDefault();
+            }
+        });
+
+        // Simulate slow loading for contract address
+        setTimeout(() => {
+            document.getElementById('contractAddress').textContent = 'loading...';
+        }, 3000);
+    </script>
+</body>
+</html>
